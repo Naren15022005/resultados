@@ -2,17 +2,21 @@
 
 const APP_KEY = 'icfes_2026_data';
 
-let currentView    = 'grid';
-let editingId      = null;
-let deletingId     = null;
-let editPendingFoto = undefined; // undefined = no change, null = remove, string = new base64
+let currentView     = 'grid';
+let editingId       = null;
+let deletingId      = null;
+let editPendingFoto = undefined;
 
-// ── Data ─────────────────────────────────────────────────────
-function getData()        { const s = localStorage.getItem(APP_KEY); return s ? JSON.parse(s) : []; }
-function saveData(data)   { localStorage.setItem(APP_KEY, JSON.stringify(data)); }
+// ── Data ──────────────────────────────────────────────────────
+function getData()      { const s = localStorage.getItem(APP_KEY); return s ? JSON.parse(s) : []; }
+function saveData(data) { localStorage.setItem(APP_KEY, JSON.stringify(data)); }
 
 function initials(nombre) {
     return nombre.trim().split(' ').slice(0, 2).map(w => w[0].toUpperCase()).join('');
+}
+
+function renderIcons() {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function resizeImage(file, maxSize = 200, quality = 0.75) {
@@ -40,28 +44,10 @@ function resizeImage(file, maxSize = 200, quality = 0.75) {
 
 function formatDate(iso) {
     if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+    return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-// ── Summary bar ───────────────────────────────────────────────
-function renderSummary(data) {
-    const total       = data.length;
-    const conResultado = data.filter(p => p.resultado !== null).length;
-    const sinResultado = total - conResultado;
-    const promEst      = total ? Math.round(data.reduce((s, p) => s + p.estimado, 0) / total) : 0;
-    const promRes      = conResultado ? Math.round(data.filter(p => p.resultado !== null).reduce((s, p) => s + p.resultado, 0) / conResultado) : null;
-
-    document.getElementById('summaryBar').innerHTML = `
-        <div class="summary-pill">👥 ${total} participante${total !== 1 ? 's' : ''}</div>
-        <div class="summary-pill">✅ ${conResultado} con resultado</div>
-        <div class="summary-pill">⏳ ${sinResultado} sin resultado</div>
-        <div class="summary-pill">📊 Prom. estimado: ${promEst}</div>
-        ${promRes !== null ? `<div class="summary-pill">🎯 Prom. real: ${promRes}</div>` : ''}
-    `;
-}
-
-// ── Shared avatar helper ──────────────────────────────────────
+// ── Avatar helpers ────────────────────────────────────────────
 function cardAvatar(p) {
     if (p.foto) return `<img src="${p.foto}" alt="${p.nombre}" class="p-card-avatar">`;
     return `<div class="p-card-avatar-placeholder">${initials(p.nombre)}</div>`;
@@ -73,38 +59,67 @@ function rowAvatar(p) {
 }
 
 function diffBadge(estimado, resultado) {
-    if (resultado === null) return '';
+    if (resultado === null) return '—';
     const d   = resultado - estimado;
     const cls = d > 0 ? 'positive' : d < 0 ? 'negative' : 'neutral';
     const sym = d > 0 ? '+' : '';
-    return `<span class="difference ${cls}" style="font-size:0.82em;">${sym}${d}</span>`;
+    return `<span class="difference ${cls}">${sym}${d}</span>`;
 }
 
-// ── Render ────────────────────────────────────────────────────
+// ── Summary ───────────────────────────────────────────────────
+function renderSummary(data) {
+    const total        = data.length;
+    const conResultado = data.filter(p => p.resultado !== null).length;
+    const sinResultado = total - conResultado;
+    const promEst      = total ? Math.round(data.reduce((s, p) => s + p.estimado, 0) / total) : 0;
+    const promRes      = conResultado
+        ? Math.round(data.filter(p => p.resultado !== null).reduce((s, p) => s + p.resultado, 0) / conResultado)
+        : null;
+
+    document.getElementById('summaryBar').innerHTML = `
+        <div class="summary-pill"><i data-lucide="users" width="13" height="13"></i> ${total} participante${total !== 1 ? 's' : ''}</div>
+        <div class="summary-pill"><i data-lucide="check-circle" width="13" height="13"></i> ${conResultado} con resultado</div>
+        <div class="summary-pill"><i data-lucide="clock" width="13" height="13"></i> ${sinResultado} sin resultado</div>
+        <div class="summary-pill"><i data-lucide="bar-chart-2" width="13" height="13"></i> Prom. estimado: ${promEst}</div>
+        ${promRes !== null ? `<div class="summary-pill"><i data-lucide="target" width="13" height="13"></i> Prom. real: ${promRes}</div>` : ''}
+    `;
+    renderIcons();
+}
+
+// ── Main render ───────────────────────────────────────────────
 function render() {
     const query = document.getElementById('searchInput').value.toLowerCase().trim();
     const data  = getData().filter(p => !query || p.nombre.toLowerCase().includes(query));
-
     renderSummary(getData());
-
     const container = document.getElementById('participantsContainer');
-
-    if (currentView === 'grid') {
-        renderGrid(container, data);
-    } else {
-        renderList(container, data);
-    }
+    currentView === 'grid' ? renderGrid(container, data) : renderList(container, data);
 }
 
 function renderGrid(container, data) {
     if (data.length === 0) {
-        container.innerHTML = '<div class="participants-grid"><div class="empty-grid"><div class="empty-grid-icon">👥</div><p>No hay participantes aún.</p></div></div>';
+        container.innerHTML = `
+            <div class="participants-grid">
+                <div class="empty-grid">
+                    <div class="empty-grid-icon"><i data-lucide="users" width="52" height="52"></i></div>
+                    <p>No hay participantes aun.</p>
+                </div>
+            </div>`;
+        renderIcons();
         return;
     }
 
-    const cards = data.map(p => `
+    const rankClass = ['rank-1', 'rank-2', 'rank-3'];
+    const sorted    = [...data].sort((a, b) => (b.resultado ?? -1) - (a.resultado ?? -1));
+
+    const cards = data.map(p => {
+        const rankIdx = sorted.findIndex(s => s.id === p.id);
+        const badge   = p.resultado !== null && rankIdx < 3
+            ? `<span class="rank-badge ${rankClass[rankIdx]}" style="position:absolute;top:12px;right:12px;">${rankIdx + 1}</span>`
+            : '';
+        return `
         <div class="p-card">
-            <div class="p-card-header">
+            <div class="p-card-header" style="position:relative;">
+                ${badge}
                 ${cardAvatar(p)}
                 <div class="p-card-name">${p.nombre}</div>
                 <div class="p-card-date">${formatDate(p.fechaRegistro)}</div>
@@ -123,21 +138,31 @@ function renderGrid(container, data) {
                         <span class="p-score-label">Diferencia</span>
                         ${diffBadge(p.estimado, p.resultado)}
                     </div>
-                ` : `<div class="p-no-result">Sin resultado aún</div>`}
+                ` : `<div class="p-no-result">Sin resultado aun</div>`}
                 <div class="p-card-actions">
-                    <button class="btn btn-primary btn-small" onclick="openEdit(${p.id})">Editar</button>
-                    <button class="btn btn-danger btn-small" onclick="openDelete(${p.id})">Eliminar</button>
+                    <button class="btn btn-primary btn-small" onclick="openEdit(${p.id})">
+                        <i data-lucide="pencil" width="13" height="13"></i> Editar
+                    </button>
+                    <button class="btn btn-danger btn-small" onclick="openDelete(${p.id})">
+                        <i data-lucide="trash-2" width="13" height="13"></i>
+                    </button>
                 </div>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 
     container.innerHTML = `<div class="participants-grid">${cards}</div>`;
+    renderIcons();
 }
 
 function renderList(container, data) {
     if (data.length === 0) {
-        container.innerHTML = '<div class="empty-state" style="padding:60px 20px;"><div class="empty-state-icon">👥</div><p>No hay participantes aún.</p></div>';
+        container.innerHTML = `
+            <div class="empty-state" style="padding:60px 20px;">
+                <div class="empty-state-icon"><i data-lucide="users" width="48" height="48"></i></div>
+                <p>No hay participantes aun.</p>
+            </div>`;
+        renderIcons();
         return;
     }
 
@@ -159,17 +184,21 @@ function renderList(container, data) {
                 </div>
                 <div class="p-row-score">
                     <div class="p-row-score-label">Diferencia</div>
-                    <div class="p-row-score-value">${p.resultado !== null ? diffBadge(p.estimado, p.resultado) : '—'}</div>
+                    <div class="p-row-score-value">${diffBadge(p.estimado, p.resultado)}</div>
                 </div>
             </div>
             <div class="p-row-actions">
-                <button class="btn btn-primary btn-small" onclick="openEdit(${p.id})">Editar</button>
-                <button class="btn btn-danger btn-small" onclick="openDelete(${p.id})">Eliminar</button>
+                <button class="btn btn-primary btn-small" onclick="openEdit(${p.id})">
+                    <i data-lucide="pencil" width="13" height="13"></i> Editar
+                </button>
+                <button class="btn btn-danger btn-small" onclick="openDelete(${p.id})">
+                    <i data-lucide="trash-2" width="13" height="13"></i>
+                </button>
             </div>
-        </div>
-    `).join('');
+        </div>`).join('');
 
     container.innerHTML = `<div class="participants-list-view">${rows}</div>`;
+    renderIcons();
 }
 
 // ── Edit modal ────────────────────────────────────────────────
@@ -177,13 +206,14 @@ window.openEdit = function(id) {
     const p = getData().find(p => p.id === id);
     if (!p) return;
 
-    editingId      = id;
+    editingId       = id;
     editPendingFoto = undefined;
 
     document.getElementById('editModalTitle').textContent = `Editar — ${p.nombre}`;
     document.getElementById('editNombre').value    = p.nombre;
     document.getElementById('editEstimado').value  = p.estimado;
     document.getElementById('editResultado').value = p.resultado !== null ? p.resultado : '';
+    document.getElementById('editFotoInput').value = '';
 
     const previewWrap = document.getElementById('editPreviewWrap');
     const previewImg  = document.getElementById('editPreview');
@@ -198,53 +228,42 @@ window.openEdit = function(id) {
         uploadText.style.display = '';
     }
 
-    document.getElementById('editFotoInput').value = '';
     document.getElementById('editModal').classList.add('open');
 };
 
 window.closeModal = function() {
     document.getElementById('editModal').classList.remove('open');
-    editingId = null;
-    editPendingFoto = undefined;
+    editingId = null; editPendingFoto = undefined;
 };
 
 window.saveEdit = function() {
-    const data     = getData();
-    const p        = data.find(p => p.id === editingId);
+    const data = getData();
+    const p    = data.find(p => p.id === editingId);
     if (!p) return;
 
     const estimado  = parseInt(document.getElementById('editEstimado').value, 10);
     const resVal    = document.getElementById('editResultado').value;
     const resultado = resVal !== '' ? parseInt(resVal, 10) : null;
 
-    if (isNaN(estimado) || estimado < 0 || estimado > 500) { alert('Estimado inválido (0–500)'); return; }
-    if (resultado !== null && (isNaN(resultado) || resultado < 0 || resultado > 500)) { alert('Resultado inválido (0–500)'); return; }
+    if (isNaN(estimado) || estimado < 0 || estimado > 500) { alert('Estimado invalido (0–500)'); return; }
+    if (resultado !== null && (isNaN(resultado) || resultado < 0 || resultado > 500)) { alert('Resultado invalido (0–500)'); return; }
 
     p.estimado  = estimado;
     p.resultado = resultado;
-
-    if (editPendingFoto !== undefined) {
-        p.foto = editPendingFoto; // null removes, string sets new
-    }
+    if (editPendingFoto !== undefined) p.foto = editPendingFoto;
 
     saveData(data);
     closeModal();
     render();
 };
 
-// Edit photo upload
 document.getElementById('editFotoInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const base64 = await resizeImage(file);
-    editPendingFoto = base64;
-
-    const previewImg  = document.getElementById('editPreview');
-    const previewWrap = document.getElementById('editPreviewWrap');
-    const uploadText  = document.getElementById('editUploadText');
-    previewImg.src = base64;
-    previewWrap.classList.add('visible');
-    uploadText.style.display = 'none';
+    editPendingFoto = await resizeImage(file);
+    document.getElementById('editPreview').src = editPendingFoto;
+    document.getElementById('editPreviewWrap').classList.add('visible');
+    document.getElementById('editUploadText').style.display = 'none';
 });
 
 document.getElementById('editRemoveImg').addEventListener('click', () => {
@@ -272,7 +291,6 @@ window.confirmDelete = function() {
     render();
 };
 
-// Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
@@ -301,3 +319,4 @@ document.getElementById('searchInput').addEventListener('input', render);
 
 // ── Boot ──────────────────────────────────────────────────────
 render();
+renderIcons();

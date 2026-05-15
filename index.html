@@ -9,41 +9,55 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📚 ICFES 2026</h1>
+            <h1>
+                <i data-lucide="book-open" width="48" height="48"></i>
+                ICFES 2026
+            </h1>
             <p>Estimado vs Resultado</p>
-            <a href="participantes.html" style="display:inline-block;margin-top:16px;background:rgba(255,255,255,0.2);color:white;text-decoration:none;padding:10px 24px;border-radius:8px;font-weight:600;font-size:0.95em;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">👥 Ver todos los participantes</a>
+            <a href="participantes.html" class="header-nav-btn">
+                <i data-lucide="users" width="16" height="16"></i>
+                Ver todos los participantes
+            </a>
         </div>
 
         <div class="card">
             <div class="tabs">
-                <button class="tab-btn active" data-tab="hoy">Hoy - Estimado</button>
-                <button class="tab-btn" data-tab="resultados">Mañana - Resultado</button>
-                <button class="tab-btn" data-tab="ranking">Ranking</button>
+                <button class="tab-btn active" data-tab="hoy">
+                    <i data-lucide="calendar" width="15" height="15"></i> Hoy — Estimado
+                </button>
+                <button class="tab-btn" data-tab="resultados">
+                    <i data-lucide="clipboard-check" width="15" height="15"></i> Resultado
+                </button>
+                <button class="tab-btn" data-tab="ranking">
+                    <i data-lucide="trophy" width="15" height="15"></i> Ranking
+                </button>
             </div>
 
             <!-- TAB: HOY -->
             <div id="hoy" class="tab-content active">
-                <h2 style="margin-bottom:30px;color:#333;">¿Qué puntuación crees que vas a sacar?</h2>
+                <h2>¿Qué puntuación crees que vas a sacar?</h2>
 
                 <div id="hoyMessage"></div>
 
                 <form id="formHoy">
                     <div class="form-group">
-                        <label for="nombre">Tu nombre completo</label>
-                        <input type="text" id="nombre" placeholder="Ej: Juan Pérez" required>
+                        <label for="nombre">Nombre completo</label>
+                        <input type="text" id="nombre" placeholder="Juan Pérez" required>
                     </div>
 
                     <div class="form-group">
                         <label for="estimado">Tu estimación (0–500)</label>
-                        <input type="number" id="estimado" min="0" max="500" placeholder="Ej: 380" required>
+                        <input type="number" id="estimado" min="0" max="500" placeholder="380" required>
                     </div>
 
                     <div class="form-group">
-                        <label>Tu foto (opcional)</label>
+                        <label>Foto (opcional)</label>
                         <div class="image-upload-area" id="uploadArea">
                             <input type="file" id="fotoInput" accept="image/*">
                             <div id="uploadText">
-                                <div class="upload-icon">📷</div>
+                                <div class="upload-icon">
+                                    <i data-lucide="camera" width="32" height="32"></i>
+                                </div>
                                 <div>Haz clic o arrastra una foto</div>
                                 <div class="upload-hint">JPG, PNG, WebP — se comprime automáticamente</div>
                             </div>
@@ -51,30 +65,35 @@
                         <div class="image-preview-wrap" id="imagePreviewWrap">
                             <img id="imagePreview" src="" alt="Preview">
                             <div>
-                                <div style="font-weight:600;margin-bottom:4px;">Foto lista ✅</div>
-                                <button type="button" class="remove-image-btn" id="removeImageBtn">Quitar foto</button>
+                                <div class="upload-ready-label">Foto lista</div>
+                                <button type="button" class="remove-image-btn" id="removeImageBtn">
+                                    <i data-lucide="x" width="13" height="13"></i> Quitar
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary">Guardar mi Estimado</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="save" width="17" height="17"></i>
+                        Guardar mi Estimado
+                    </button>
                 </form>
 
-                <div style="margin-top:40px;border-top:2px solid #e0e0e0;padding-top:30px;">
-                    <h3 style="margin-bottom:20px;color:#333;">Participantes registrados</h3>
+                <div style="margin-top:36px;border-top:1px solid var(--border);padding-top:28px;">
+                    <h3 style="margin-bottom:18px;">Participantes registrados</h3>
                     <div id="participantesHoy" class="participant-list"></div>
                 </div>
             </div>
 
             <!-- TAB: RESULTADOS -->
             <div id="resultados" class="tab-content">
-                <h2 style="margin-bottom:30px;color:#333;">Ingresa tu resultado</h2>
+                <h2>Ingresa tu resultado</h2>
 
                 <div id="resultadosMessage"></div>
 
                 <div class="form-group">
-                    <label for="buscarNombre">¿Cuál es tu nombre?</label>
-                    <input type="text" id="buscarNombre" placeholder="Ej: Juan Pérez">
+                    <label for="buscarNombre">Tu nombre</label>
+                    <input type="text" id="buscarNombre" placeholder="Juan Pérez">
                 </div>
 
                 <div id="resultadosContainer"></div>
@@ -83,13 +102,14 @@
 
             <!-- TAB: RANKING -->
             <div id="ranking" class="tab-content">
-                <h2 style="margin-bottom:30px;color:#333;">Ranking General</h2>
+                <h2>Ranking General</h2>
                 <div class="stats-grid" id="statsGrid"></div>
                 <div id="rankingContainer"></div>
             </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
