@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICFES 2026 - Estimado vs Resultado</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 ICFES 2026</h1>
+            <p>Estimado vs Resultado</p>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="hoy">Hoy - Estimado</button>
+                <button class="tab-btn" data-tab="resultados">Mañana - Resultado</button>
+                <button class="tab-btn" data-tab="ranking">Ranking</button>
+            </div>
+
+            <!-- TAB: HOY -->
+            <div id="hoy" class="tab-content active">
+                <h2 style="margin-bottom:30px;color:#333;">¿Qué puntuación crees que vas a sacar?</h2>
+
+                <div id="hoyMessage"></div>
+
+                <form id="formHoy">
+                    <div class="form-group">
+                        <label for="nombre">Tu nombre completo</label>
+                        <input type="text" id="nombre" placeholder="Ej: Juan Pérez" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimado">Tu estimación (0–500)</label>
+                        <input type="number" id="estimado" min="0" max="500" placeholder="Ej: 380" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tu foto (opcional)</label>
+                        <div class="image-upload-area" id="uploadArea">
+                            <input type="file" id="fotoInput" accept="image/*">
+                            <div id="uploadText">
+                                <div class="upload-icon">📷</div>
+                                <div>Haz clic o arrastra una foto</div>
+                                <div class="upload-hint">JPG, PNG, WebP — se comprime automáticamente</div>
+                            </div>
+                        </div>
+                        <div class="image-preview-wrap" id="imagePreviewWrap">
+                            <img id="imagePreview" src="" alt="Preview">
+                            <div>
+                                <div style="font-weight:600;margin-bottom:4px;">Foto lista ✅</div>
+                                <button type="button" class="remove-image-btn" id="removeImageBtn">Quitar foto</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Guardar mi Estimado</button>
+                </form>
+
+                <div style="margin-top:40px;border-top:2px solid #e0e0e0;padding-top:30px;">
+                    <h3 style="margin-bottom:20px;color:#333;">Participantes registrados</h3>
+                    <div id="participantesHoy" class="participant-list"></div>
+                </div>
+            </div>
+
+            <!-- TAB: RESULTADOS -->
+            <div id="resultados" class="tab-content">
+                <h2 style="margin-bottom:30px;color:#333;">Ingresa tu resultado</h2>
+
+                <div id="resultadosMessage"></div>
+
+                <div class="form-group">
+                    <label for="buscarNombre">¿Cuál es tu nombre?</label>
+                    <input type="text" id="buscarNombre" placeholder="Ej: Juan Pérez">
+                </div>
+
+                <div id="resultadosContainer"></div>
+                <div id="comparacionContainer"></div>
+            </div>
+
+            <!-- TAB: RANKING -->
+            <div id="ranking" class="tab-content">
+                <h2 style="margin-bottom:30px;color:#333;">Ranking General</h2>
+                <div class="stats-grid" id="statsGrid"></div>
+                <div id="rankingContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
