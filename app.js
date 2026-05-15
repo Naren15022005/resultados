@@ -146,9 +146,6 @@ function renderParticipantesHoy() {
                     </div>
                 </div>
             </div>
-            <button class="btn btn-danger btn-small" onclick="deleteParticipantBtn('${p.firebaseKey}')">
-                <i data-lucide="trash-2" width="13" height="13"></i> Eliminar
-            </button>
         </div>
     `).join('');
     renderIcons();

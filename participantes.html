@@ -7,6 +7,32 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+    <!-- Admin gate -->
+    <div id="adminGate" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:2000;align-items:center;justify-content:center;padding:20px;">
+        <div class="modal" style="max-width:380px;width:100%;">
+            <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
+                <i data-lucide="shield" width="20" height="20" style="color:var(--accent);"></i>
+                Acceso administrador
+            </div>
+            <p style="color:var(--text-muted);margin-bottom:20px;font-size:0.92em;">Esta pagina es solo para el administrador del evento.</p>
+            <div class="form-group">
+                <label for="adminPasswordInput">Contrasena</label>
+                <input type="password" id="adminPasswordInput" placeholder="••••••••" autofocus>
+            </div>
+            <div id="adminError" class="error-message" style="display:none;margin-bottom:0;">
+                <i data-lucide="x-circle" width="15" height="15"></i> Contrasena incorrecta
+            </div>
+            <div class="modal-actions">
+                <a href="index.html" class="btn btn-ghost" style="text-decoration:none;">Cancelar</a>
+                <button class="btn btn-primary" id="adminSubmitBtn">
+                    <i data-lucide="log-in" width="15" height="15"></i> Entrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainContent" style="display:none;">
     <div class="container">
         <div class="page-header">
             <a href="index.html" class="back-btn">
@@ -113,6 +139,8 @@
             </div>
         </div>
     </div>
+
+    </div> <!-- /mainContent -->
 
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>

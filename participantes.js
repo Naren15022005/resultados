@@ -8,6 +8,44 @@ let currentData     = [];
 
 let participantesRef;
 
+// ── Admin gate ────────────────────────────────────────────────
+function checkAdmin() {
+    const SESSION_KEY = 'icfes_admin_ok';
+
+    if (sessionStorage.getItem(SESSION_KEY) === '1') {
+        showApp();
+        return;
+    }
+
+    const gate  = document.getElementById('adminGate');
+    const input = document.getElementById('adminPasswordInput');
+    const error = document.getElementById('adminError');
+    const btn   = document.getElementById('adminSubmitBtn');
+
+    lucide.createIcons();
+
+    function tryLogin() {
+        if (input.value === ADMIN_PASSWORD) {
+            sessionStorage.setItem(SESSION_KEY, '1');
+            gate.style.display = 'none';
+            showApp();
+        } else {
+            error.style.display = 'flex';
+            input.value = '';
+            input.focus();
+        }
+    }
+
+    btn.addEventListener('click', tryLogin);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(); });
+}
+
+function showApp() {
+    document.getElementById('mainContent').style.display = '';
+    initFirebase();
+    renderIcons();
+}
+
 // ── Firebase ──────────────────────────────────────────────────
 function initFirebase() {
     try { firebase.initializeApp(FIREBASE_CONFIG); } catch (e) { /* ya inicializado */ }
@@ -333,5 +371,4 @@ document.getElementById('btnList').addEventListener('click', () => {
 document.getElementById('searchInput').addEventListener('input', render);
 
 // ── Boot ──────────────────────────────────────────────────────
-initFirebase();
-renderIcons();
+checkAdmin();
