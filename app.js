@@ -35,6 +35,7 @@ function initFirebase() {
         const activeId = document.querySelector('.tab-content.active')?.id;
         if (activeId === 'ranking')    renderRanking();
         if (activeId === 'resultados') renderResultados();
+        if (activeId === 'album')      renderAlbum();
     });
 }
 
@@ -82,7 +83,7 @@ function avatarEl(foto, nombre, cssClass) {
 }
 
 // ── Data operations (Firebase) ────────────────────────────────
-async function createParticipant(nombre, estimado, foto) {
+async function createParticipant(nombre, estimado, foto, carrera, albumFoto) {
     if (yaIngresoHoy()) return { yaIngreso: true };
 
     const exists = currentData.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
@@ -93,6 +94,8 @@ async function createParticipant(nombre, estimado, foto) {
         estimado:      parseInt(estimado, 10),
         resultado:     null,
         foto:          foto || null,
+        carrera:       carrera?.trim() || null,
+        albumFoto:     albumFoto || null,
         fechaRegistro: new Date().toISOString()
     });
 
@@ -176,6 +179,7 @@ function renderParticipantesHoy() {
                 ${avatarEl(p.foto, p.nombre, 'participant-avatar')}
                 <div class="participant-info">
                     <div class="participant-name">${p.nombre}</div>
+                    ${p.carrera ? `<div class="participant-career"><i data-lucide="graduation-cap" width="11" height="11"></i>${p.carrera}</div>` : ''}
                     <div class="participant-estimado">
                         <span class="score-item">
                             <i data-lucide="target" width="13" height="13"></i>
@@ -324,9 +328,96 @@ function renderRanking() {
         <table class="comparison-table">
             <thead><tr><th></th><th>Nombre</th><th>Estimado</th><th>Resultado</th><th>Diferencia</th></tr></thead>
             <tbody>${rows}</tbody>
-        </table>`;
+        </table>
+        ${buildCareerRankingHTML(conResultados)}`;
     renderIcons();
 }
+
+function buildCareerRankingHTML(conResultados) {
+    const byCarrera = {};
+    conResultados.forEach(p => {
+        if (!p.carrera) return;
+        const key = p.carrera.trim();
+        if (!byCarrera[key]) byCarrera[key] = [];
+        byCarrera[key].push(p);
+    });
+
+    const entries = Object.entries(byCarrera);
+    if (entries.length === 0) return '';
+
+    entries.forEach(([, arr]) => arr.sort((a, b) => b.resultado - a.resultado));
+    entries.sort((a, b) => b[1][0].resultado - a[1][0].resultado);
+
+    const cards = entries.map(([carrera, participants]) => {
+        const rows = participants.map((p, i) => `
+            <div class="career-row${i === 0 ? ' career-winner-row' : ''}">
+                ${avatarEl(p.foto, p.nombre, 'ranking-avatar')}
+                <div class="career-row-info">
+                    <div class="career-row-name">${p.nombre}</div>
+                    <div class="career-row-score">${p.resultado} pts</div>
+                </div>
+                ${i === 0
+                    ? `<span class="career-crown"><i data-lucide="crown" width="16" height="16"></i></span>`
+                    : `<span style="color:var(--text-dim);font-size:0.8em;">#${i + 1}</span>`}
+            </div>`).join('');
+        return `
+        <div class="career-card">
+            <div class="career-card-title">
+                <i data-lucide="graduation-cap" width="14" height="14"></i>
+                ${carrera}
+            </div>
+            ${rows}
+        </div>`;
+    }).join('');
+
+    return `
+        <div class="career-section-title">
+            <i data-lucide="graduation-cap" width="18" height="18"></i>
+            Ranking por Carrera
+        </div>
+        <div class="career-cards-grid">${cards}</div>`;
+}
+
+// ── Render: Tab Álbum ─────────────────────────────────────────
+function renderAlbum() {
+    const container = document.getElementById('albumContainer');
+    if (!container) return;
+    const withAlbum = currentData.filter(p => p.albumFoto);
+    if (withAlbum.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon"><i data-lucide="image" width="48" height="48"></i></div>
+                <p>Aun no hay fotos en el álbum.</p>
+            </div>`;
+        renderIcons();
+        return;
+    }
+    container.innerHTML = `<div class="album-grid">${withAlbum.map(p => `
+        <div class="album-card" onclick="openLightbox('${p.firebaseKey}')">
+            <img src="${p.albumFoto}" alt="${p.nombre}" loading="lazy">
+            <div class="album-card-overlay">
+                <div class="album-card-name">${p.nombre}</div>
+                ${p.carrera ? `<div class="album-card-career">${p.carrera}</div>` : ''}
+                ${p.resultado !== null ? `<div class="album-card-score">${p.resultado} pts</div>` : ''}
+            </div>
+        </div>`).join('')}</div>`;
+    renderIcons();
+}
+
+window.openLightbox = function(firebaseKey) {
+    const p = currentData.find(p => p.firebaseKey === firebaseKey);
+    if (!p || !p.albumFoto) return;
+    document.getElementById('lightboxImg').src = p.albumFoto;
+    document.getElementById('lightboxInfo').innerHTML = `
+        <div style="font-weight:700;font-size:1em;">${p.nombre}</div>
+        ${p.carrera ? `<div style="color:var(--accent);font-size:0.85em;">${p.carrera}</div>` : ''}
+        ${p.resultado !== null ? `<div style="color:var(--success);font-size:0.85em;">${p.resultado} pts</div>` : ''}`;
+    document.getElementById('lightbox').classList.add('open');
+};
+
+window.closeLightbox = function() {
+    document.getElementById('lightbox').classList.remove('open');
+};
 
 // ── Button handlers ───────────────────────────────────────────
 window.setResultadoBtn = async function(firebaseKey, inputId) {
@@ -354,6 +445,7 @@ window.deleteParticipantBtn = function(firebaseKey) {
 
 // ── Image upload ──────────────────────────────────────────────
 let pendingFoto = null;
+let pendingAlbumFoto = null;
 
 function setupImageUpload() {
     const fileInput   = document.getElementById('fotoInput');
@@ -385,15 +477,47 @@ function setupImageUpload() {
         previewWrap.classList.remove('visible');
         uploadText.style.display = '';
     });
+
+    // Album photo upload
+    const albumFileInput   = document.getElementById('albumFotoInput');
+    const albumUploadArea  = document.getElementById('albumUploadArea');
+    const albumPreviewWrap = document.getElementById('albumPreviewWrap');
+    const albumPreviewImg  = document.getElementById('albumPreview');
+    const removeAlbumBtn   = document.getElementById('removeAlbumBtn');
+    const albumUploadText  = document.getElementById('albumUploadText');
+
+    async function handleAlbumFile(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        pendingAlbumFoto    = await resizeImage(file, 400, 0.8);
+        albumPreviewImg.src = pendingAlbumFoto;
+        albumPreviewWrap.classList.add('visible');
+        albumUploadText.style.display = 'none';
+    }
+
+    albumFileInput.addEventListener('change', (e) => handleAlbumFile(e.target.files[0]));
+    albumUploadArea.addEventListener('dragover',  (e) => { e.preventDefault(); albumUploadArea.classList.add('drag-over'); });
+    albumUploadArea.addEventListener('dragleave', ()  => albumUploadArea.classList.remove('drag-over'));
+    albumUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        albumUploadArea.classList.remove('drag-over');
+        handleAlbumFile(e.dataTransfer.files[0]);
+    });
+    removeAlbumBtn.addEventListener('click', () => {
+        pendingAlbumFoto = null;
+        albumFileInput.value = '';
+        albumPreviewWrap.classList.remove('visible');
+        albumUploadText.style.display = '';
+    });
 }
 
 document.getElementById('formHoy').addEventListener('submit', async function(e) {
     e.preventDefault();
     const nombre   = document.getElementById('nombre').value;
     const estimado = document.getElementById('estimado').value;
+    const carrera  = document.getElementById('carrera').value;
     const msg      = document.getElementById('hoyMessage');
 
-    const result = await createParticipant(nombre, estimado, pendingFoto);
+    const result = await createParticipant(nombre, estimado, pendingFoto, carrera, pendingAlbumFoto);
 
     if (result.exists) {
         msg.innerHTML = `<div class="error-message"><i data-lucide="x-circle" width="16" height="16"></i> Ese nombre ya esta registrado.</div>`;
@@ -403,8 +527,11 @@ document.getElementById('formHoy').addEventListener('submit', async function(e) 
         msg.innerHTML = `<div class="success-message"><i data-lucide="check-circle" width="16" height="16"></i> Estimado guardado. Vuelve manana para ingresar tu resultado.</div>`;
         this.reset();
         pendingFoto = null;
+        pendingAlbumFoto = null;
         document.getElementById('imagePreviewWrap').classList.remove('visible');
         document.getElementById('uploadText').style.display = '';
+        document.getElementById('albumPreviewWrap').classList.remove('visible');
+        document.getElementById('albumUploadText').style.display = '';
         setTimeout(() => msg.innerHTML = '', 5000);
     }
     renderIcons();
@@ -419,6 +546,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         if (tab === 'ranking') renderRanking();
+        if (tab === 'album')   renderAlbum();
     });
 });
 

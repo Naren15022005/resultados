@@ -32,6 +32,9 @@
                 <button class="tab-btn" data-tab="ranking">
                     <i data-lucide="trophy" width="15" height="15"></i> Ranking
                 </button>
+                <button class="tab-btn" data-tab="album">
+                    <i data-lucide="images" width="15" height="15"></i> Álbum
+                </button>
             </div>
 
             <!-- Banner restauracion datos locales -->
@@ -61,7 +64,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Foto (opcional)</label>
+                        <label for="carrera">Carrera a realizar (opcional)</label>
+                        <input type="text" id="carrera" placeholder="Ej: Medicina, Ingeniería, Derecho...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Foto de perfil (opcional)</label>
                         <div class="image-upload-area" id="uploadArea">
                             <input type="file" id="fotoInput" accept="image/*">
                             <div id="uploadText">
@@ -77,6 +85,29 @@
                             <div>
                                 <div class="upload-ready-label">Foto lista</div>
                                 <button type="button" class="remove-image-btn" id="removeImageBtn">
+                                    <i data-lucide="x" width="13" height="13"></i> Quitar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Foto random para el álbum (opcional)</label>
+                        <div class="image-upload-area" id="albumUploadArea">
+                            <input type="file" id="albumFotoInput" accept="image/*">
+                            <div id="albumUploadText">
+                                <div class="upload-icon">
+                                    <i data-lucide="image" width="32" height="32"></i>
+                                </div>
+                                <div>Haz clic o arrastra una foto para el álbum</div>
+                                <div class="upload-hint">La que quieras — se comprime automáticamente</div>
+                            </div>
+                        </div>
+                        <div class="image-preview-wrap" id="albumPreviewWrap">
+                            <img id="albumPreview" src="" alt="Preview álbum">
+                            <div>
+                                <div class="upload-ready-label">Foto lista</div>
+                                <button type="button" class="remove-image-btn" id="removeAlbumBtn">
                                     <i data-lucide="x" width="13" height="13"></i> Quitar
                                 </button>
                             </div>
@@ -116,7 +147,22 @@
                 <div class="stats-grid" id="statsGrid"></div>
                 <div id="rankingContainer"></div>
             </div>
+
+            <!-- TAB: ALBUM -->
+            <div id="album" class="tab-content">
+                <h2>Álbum de fotos</h2>
+                <div id="albumContainer"></div>
+            </div>
         </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <button class="lightbox-close" onclick="event.stopPropagation();closeLightbox()">
+            <i data-lucide="x" width="24" height="24"></i>
+        </button>
+        <img id="lightboxImg" src="" alt="">
+        <div class="lightbox-info" id="lightboxInfo"></div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>

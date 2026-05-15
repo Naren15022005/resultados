@@ -147,6 +147,7 @@ function renderGrid(container, data) {
                 ${isMe ? `<span class="mine-tag"><i data-lucide="user" width="11" height="11"></i> Tu</span>` : ''}
                 ${cardAvatar(p)}
                 <div class="p-card-name">${p.nombre}</div>
+                ${p.carrera ? `<div class="p-card-career"><i data-lucide="graduation-cap" width="11" height="11"></i>${p.carrera}</div>` : ''}
                 <div class="p-card-date">${formatDate(p.fechaRegistro)}</div>
             </div>
             <div class="p-card-body">
@@ -201,6 +202,7 @@ function renderList(container, data) {
                     ${p.nombre}
                     ${isMe ? `<span class="mine-tag" style="margin-left:8px;"><i data-lucide="user" width="10" height="10"></i> Tu</span>` : ''}
                 </div>
+                ${p.carrera ? `<div class="p-row-career"><i data-lucide="graduation-cap" width="10" height="10"></i>${p.carrera}</div>` : ''}
                 <div class="p-row-sub">${formatDate(p.fechaRegistro)}</div>
             </div>
             <div class="p-row-scores">
