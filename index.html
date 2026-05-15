@@ -34,6 +34,15 @@
                 </button>
             </div>
 
+            <!-- Banner restauracion datos locales -->
+            <div id="migrationBanner" style="display:none;align-items:center;gap:12px;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.35);border-radius:10px;padding:14px 18px;margin-bottom:20px;flex-wrap:wrap;">
+                <i data-lucide="database" width="18" height="18" style="color:var(--warning);flex-shrink:0;"></i>
+                <span style="flex:1;font-size:0.9em;color:var(--warning);">Se encontraron <strong id="migrationCount">?</strong> participante(s) guardados localmente antes de la sincronizacion. Restauralos a Firebase para que todos los vean.</span>
+                <button id="migrationBtn" class="btn btn-small" style="background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);color:var(--warning);flex-shrink:0;" onclick="runMigration()">
+                    <i data-lucide="upload-cloud" width="14" height="14"></i> Restaurar datos
+                </button>
+            </div>
+
             <!-- TAB: HOY -->
             <div id="hoy" class="tab-content active">
                 <h2>¿Qué puntuación crees que vas a sacar?</h2>

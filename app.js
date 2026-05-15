@@ -112,10 +112,50 @@ function deleteParticipant(firebaseKey) {
     participantesRef.child(firebaseKey).remove();
 }
 
+// ── Migración localStorage → Firebase ────────────────────────
+function checkLocalMigration() {
+    const banner = document.getElementById('migrationBanner');
+    if (!banner) return;
+    const stored = localStorage.getItem('icfes_2026_data');
+    if (!stored) { banner.style.display = 'none'; return; }
+    try {
+        const old = JSON.parse(stored);
+        if (!old || old.length === 0) { banner.style.display = 'none'; return; }
+        banner.style.display = 'flex';
+        document.getElementById('migrationCount').textContent = old.length;
+    } catch (e) { banner.style.display = 'none'; }
+}
+
+window.runMigration = async function() {
+    const stored = localStorage.getItem('icfes_2026_data');
+    if (!stored) return;
+    const old = JSON.parse(stored);
+    const btn = document.getElementById('migrationBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" width="15" height="15"></i> Subiendo...';
+    renderIcons();
+
+    for (const p of old) {
+        const exists = currentData.some(d => d.nombre.toLowerCase() === p.nombre.toLowerCase());
+        if (!exists) {
+            await participantesRef.push({
+                nombre:        p.nombre,
+                estimado:      p.estimado,
+                resultado:     p.resultado ?? null,
+                foto:          p.foto || null,
+                fechaRegistro: p.fechaRegistro || new Date().toISOString()
+            });
+        }
+    }
+    localStorage.removeItem('icfes_2026_data');
+    document.getElementById('migrationBanner').style.display = 'none';
+};
+
 // ── Render: Tab Hoy ───────────────────────────────────────────
 function renderParticipantesHoy() {
     const container = document.getElementById('participantesHoy');
     if (!container) return;
+    checkLocalMigration();
 
     if (currentData.length === 0) {
         container.innerHTML = `
