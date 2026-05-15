@@ -7,32 +7,6 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-
-    <!-- Admin gate -->
-    <div id="adminGate" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:2000;align-items:center;justify-content:center;padding:20px;">
-        <div class="modal" style="max-width:380px;width:100%;">
-            <div class="modal-title" style="display:flex;align-items:center;gap:10px;">
-                <i data-lucide="shield" width="20" height="20" style="color:var(--accent);"></i>
-                Acceso administrador
-            </div>
-            <p style="color:var(--text-muted);margin-bottom:20px;font-size:0.92em;">Esta pagina es solo para el administrador del evento.</p>
-            <div class="form-group">
-                <label for="adminPasswordInput">Contrasena</label>
-                <input type="password" id="adminPasswordInput" placeholder="••••••••" autofocus>
-            </div>
-            <div id="adminError" class="error-message" style="display:none;margin-bottom:0;">
-                <i data-lucide="x-circle" width="15" height="15"></i> Contrasena incorrecta
-            </div>
-            <div class="modal-actions">
-                <a href="index.html" class="btn btn-ghost" style="text-decoration:none;">Cancelar</a>
-                <button class="btn btn-primary" id="adminSubmitBtn">
-                    <i data-lucide="log-in" width="15" height="15"></i> Entrar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="mainContent" style="display:none;">
     <div class="container">
         <div class="page-header">
             <a href="index.html" class="back-btn">
@@ -40,9 +14,9 @@
                 Volver
             </a>
             <span class="page-title">
-            Participantes
-            <span id="connectionDot" title="Conectando..." style="width:10px;height:10px;border-radius:50%;background:var(--text-dim);display:inline-block;margin-left:6px;vertical-align:middle;transition:all 0.4s;"></span>
-        </span>
+                Participantes
+                <span id="connectionDot" title="Conectando..." style="width:10px;height:10px;border-radius:50%;background:var(--text-dim);display:inline-block;margin-left:6px;vertical-align:middle;transition:all 0.4s;"></span>
+            </span>
             <a href="index.html" class="btn btn-primary btn-small" style="text-decoration:none;">
                 <i data-lucide="plus" width="15" height="15"></i>
                 Agregar
@@ -68,67 +42,14 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div class="modal-overlay" id="editModal">
-        <div class="modal">
-            <div class="modal-title" id="editModalTitle">Editar participante</div>
-
-            <div class="form-group">
-                <label for="editNombre">Nombre</label>
-                <input type="text" id="editNombre" readonly>
-            </div>
-
-            <div class="form-group">
-                <label for="editEstimado">Estimado</label>
-                <input type="number" id="editEstimado" min="0" max="500">
-            </div>
-
-            <div class="form-group">
-                <label for="editResultado">Resultado (0–500)</label>
-                <input type="number" id="editResultado" min="0" max="500" placeholder="Sin resultado">
-            </div>
-
-            <div class="form-group">
-                <label>Foto</label>
-                <div class="image-upload-area" id="editUploadArea">
-                    <input type="file" id="editFotoInput" accept="image/*">
-                    <div id="editUploadText">
-                        <div class="upload-icon">
-                            <i data-lucide="camera" width="28" height="28"></i>
-                        </div>
-                        <div style="font-size:0.9em;">Clic para cambiar la foto</div>
-                    </div>
-                </div>
-                <div class="image-preview-wrap" id="editPreviewWrap">
-                    <img id="editPreview" src="" alt="Preview">
-                    <div>
-                        <div class="upload-ready-label">Nueva foto lista</div>
-                        <button type="button" class="remove-image-btn" id="editRemoveImg">
-                            <i data-lucide="x" width="13" height="13"></i> Quitar
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-actions">
-                <button class="btn btn-ghost" onclick="closeModal()">
-                    <i data-lucide="x" width="15" height="15"></i> Cancelar
-                </button>
-                <button class="btn btn-primary" onclick="saveEdit()">
-                    <i data-lucide="save" width="15" height="15"></i> Guardar
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- Delete confirm modal -->
     <div class="modal-overlay" id="deleteModal">
         <div class="modal">
             <div class="modal-title">
                 <i data-lucide="trash-2" width="20" height="20" style="color:var(--danger);margin-right:8px;vertical-align:middle;"></i>
-                Eliminar participante
+                Eliminar mi registro
             </div>
-            <p>Esta accion no se puede deshacer.</p>
+            <p>Esto eliminara tu nombre de la lista para todos. No se puede deshacer.</p>
             <div class="modal-actions">
                 <button class="btn btn-ghost" onclick="closeDeleteModal()">
                     <i data-lucide="x" width="15" height="15"></i> Cancelar
@@ -139,8 +60,6 @@
             </div>
         </div>
     </div>
-
-    </div> <!-- /mainContent -->
 
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>

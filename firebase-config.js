@@ -1,6 +1,3 @@
-// Cambia esto por tu contraseña de admin
-const ADMIN_PASSWORD = "icfes2026ss";
-
 const FIREBASE_CONFIG = {
     apiKey:            "AIzaSyDAySoiWtWhQGhv_NyGYcvcUPEiNvlwlKQ",
     authDomain:        "resultadosicfes-e59c7.firebaseapp.com",

@@ -1,50 +1,11 @@
 'use strict';
 
+const MY_KEY = 'icfes_my_key';
+
 let currentView     = 'grid';
-let editingKey      = null;
 let deletingKey     = null;
-let editPendingFoto = undefined;
 let currentData     = [];
-
 let participantesRef;
-
-// ── Admin gate ────────────────────────────────────────────────
-function checkAdmin() {
-    const SESSION_KEY = 'icfes_admin_ok';
-
-    if (sessionStorage.getItem(SESSION_KEY) === '1') {
-        showApp();
-        return;
-    }
-
-    const gate  = document.getElementById('adminGate');
-    const input = document.getElementById('adminPasswordInput');
-    const error = document.getElementById('adminError');
-    const btn   = document.getElementById('adminSubmitBtn');
-
-    lucide.createIcons();
-
-    function tryLogin() {
-        if (input.value === ADMIN_PASSWORD) {
-            sessionStorage.setItem(SESSION_KEY, '1');
-            gate.style.display = 'none';
-            showApp();
-        } else {
-            error.style.display = 'flex';
-            input.value = '';
-            input.focus();
-        }
-    }
-
-    btn.addEventListener('click', tryLogin);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryLogin(); });
-}
-
-function showApp() {
-    document.getElementById('mainContent').style.display = '';
-    initFirebase();
-    renderIcons();
-}
 
 // ── Firebase ──────────────────────────────────────────────────
 function initFirebase() {
@@ -168,18 +129,22 @@ function renderGrid(container, data) {
         return;
     }
 
+    const myKey     = localStorage.getItem(MY_KEY);
     const sorted    = [...currentData].filter(p => p.resultado !== null).sort((a, b) => b.resultado - a.resultado);
     const rankClass = ['rank-1', 'rank-2', 'rank-3'];
 
     const cards = data.map(p => {
+        const isMe    = p.firebaseKey === myKey;
         const rankIdx = sorted.findIndex(s => s.firebaseKey === p.firebaseKey);
         const badge   = rankIdx >= 0 && rankIdx < 3
             ? `<span class="rank-badge ${rankClass[rankIdx]}" style="position:absolute;top:12px;right:12px;">${rankIdx + 1}</span>`
             : '';
+
         return `
-        <div class="p-card">
+        <div class="p-card${isMe ? ' p-card--mine' : ''}">
             <div class="p-card-header" style="position:relative;">
                 ${badge}
+                ${isMe ? `<span class="mine-tag"><i data-lucide="user" width="11" height="11"></i> Tu</span>` : ''}
                 ${cardAvatar(p)}
                 <div class="p-card-name">${p.nombre}</div>
                 <div class="p-card-date">${formatDate(p.fechaRegistro)}</div>
@@ -199,14 +164,12 @@ function renderGrid(container, data) {
                         ${diffBadge(p.estimado, p.resultado)}
                     </div>
                 ` : `<div class="p-no-result">Sin resultado aun</div>`}
+                ${isMe ? `
                 <div class="p-card-actions">
-                    <button class="btn btn-primary btn-small" onclick="openEdit('${p.firebaseKey}')">
-                        <i data-lucide="pencil" width="13" height="13"></i> Editar
+                    <button class="btn btn-danger btn-small" style="flex:1;justify-content:center;" onclick="openDelete('${p.firebaseKey}')">
+                        <i data-lucide="trash-2" width="13" height="13"></i> Eliminar mi registro
                     </button>
-                    <button class="btn btn-danger btn-small" onclick="openDelete('${p.firebaseKey}')">
-                        <i data-lucide="trash-2" width="13" height="13"></i>
-                    </button>
-                </div>
+                </div>` : ''}
             </div>
         </div>`;
     }).join('');
@@ -226,11 +189,18 @@ function renderList(container, data) {
         return;
     }
 
-    const rows = data.map(p => `
-        <div class="p-row">
+    const myKey = localStorage.getItem(MY_KEY);
+
+    const rows = data.map(p => {
+        const isMe = p.firebaseKey === myKey;
+        return `
+        <div class="p-row${isMe ? ' p-row--mine' : ''}">
             ${rowAvatar(p)}
             <div class="p-row-info">
-                <div class="p-row-name">${p.nombre}</div>
+                <div class="p-row-name">
+                    ${p.nombre}
+                    ${isMe ? `<span class="mine-tag" style="margin-left:8px;"><i data-lucide="user" width="10" height="10"></i> Tu</span>` : ''}
+                </div>
                 <div class="p-row-sub">${formatDate(p.fechaRegistro)}</div>
             </div>
             <div class="p-row-scores">
@@ -247,88 +217,23 @@ function renderList(container, data) {
                     <div class="p-row-score-value">${diffBadge(p.estimado, p.resultado)}</div>
                 </div>
             </div>
+            ${isMe ? `
             <div class="p-row-actions">
-                <button class="btn btn-primary btn-small" onclick="openEdit('${p.firebaseKey}')">
-                    <i data-lucide="pencil" width="13" height="13"></i> Editar
-                </button>
                 <button class="btn btn-danger btn-small" onclick="openDelete('${p.firebaseKey}')">
                     <i data-lucide="trash-2" width="13" height="13"></i>
                 </button>
-            </div>
-        </div>`).join('');
+            </div>` : ''}
+        </div>`;
+    }).join('');
 
     container.innerHTML = `<div class="participants-list-view">${rows}</div>`;
     renderIcons();
 }
 
-// ── Edit modal ────────────────────────────────────────────────
-window.openEdit = function(firebaseKey) {
-    const p = currentData.find(p => p.firebaseKey === firebaseKey);
-    if (!p) return;
-
-    editingKey      = firebaseKey;
-    editPendingFoto = undefined;
-
-    document.getElementById('editModalTitle').textContent = `Editar — ${p.nombre}`;
-    document.getElementById('editNombre').value    = p.nombre;
-    document.getElementById('editEstimado').value  = p.estimado;
-    document.getElementById('editResultado').value = p.resultado !== null ? p.resultado : '';
-    document.getElementById('editFotoInput').value = '';
-
-    const previewWrap = document.getElementById('editPreviewWrap');
-    const previewImg  = document.getElementById('editPreview');
-    const uploadText  = document.getElementById('editUploadText');
-
-    if (p.foto) {
-        previewImg.src = p.foto;
-        previewWrap.classList.add('visible');
-        uploadText.style.display = 'none';
-    } else {
-        previewWrap.classList.remove('visible');
-        uploadText.style.display = '';
-    }
-
-    document.getElementById('editModal').classList.add('open');
-};
-
-window.closeModal = function() {
-    document.getElementById('editModal').classList.remove('open');
-    editingKey = null; editPendingFoto = undefined;
-};
-
-window.saveEdit = async function() {
-    const estimado = parseInt(document.getElementById('editEstimado').value, 10);
-    const resVal   = document.getElementById('editResultado').value;
-    const resultado = resVal !== '' ? parseInt(resVal, 10) : null;
-
-    if (isNaN(estimado) || estimado < 0 || estimado > 500) { alert('Estimado invalido (0–500)'); return; }
-    if (resultado !== null && (isNaN(resultado) || resultado < 0 || resultado > 500)) { alert('Resultado invalido (0–500)'); return; }
-
-    const updates = { estimado, resultado };
-    if (editPendingFoto !== undefined) updates.foto = editPendingFoto;
-
-    await participantesRef.child(editingKey).update(updates);
-    closeModal();
-};
-
-document.getElementById('editFotoInput').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    editPendingFoto = await resizeImage(file);
-    document.getElementById('editPreview').src = editPendingFoto;
-    document.getElementById('editPreviewWrap').classList.add('visible');
-    document.getElementById('editUploadText').style.display = 'none';
-});
-
-document.getElementById('editRemoveImg').addEventListener('click', () => {
-    editPendingFoto = null;
-    document.getElementById('editFotoInput').value = '';
-    document.getElementById('editPreviewWrap').classList.remove('visible');
-    document.getElementById('editUploadText').style.display = '';
-});
-
 // ── Delete modal ──────────────────────────────────────────────
 window.openDelete = function(firebaseKey) {
+    // Doble check: solo puede eliminar el propio
+    if (firebaseKey !== localStorage.getItem(MY_KEY)) return;
     deletingKey = firebaseKey;
     document.getElementById('deleteModal').classList.add('open');
 };
@@ -339,18 +244,15 @@ window.closeDeleteModal = function() {
 };
 
 window.confirmDelete = async function() {
-    if (!deletingKey) return;
+    if (!deletingKey || deletingKey !== localStorage.getItem(MY_KEY)) return;
     await participantesRef.child(deletingKey).remove();
+    localStorage.removeItem(MY_KEY);
+    localStorage.removeItem('icfes_2026_hoy_date');
     closeDeleteModal();
 };
 
-document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-            overlay.classList.remove('open');
-            editingKey = null; deletingKey = null; editPendingFoto = undefined;
-        }
-    });
+document.getElementById('deleteModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
 });
 
 // ── View toggle ───────────────────────────────────────────────
@@ -371,4 +273,5 @@ document.getElementById('btnList').addEventListener('click', () => {
 document.getElementById('searchInput').addEventListener('input', render);
 
 // ── Boot ──────────────────────────────────────────────────────
-checkAdmin();
+initFirebase();
+renderIcons();

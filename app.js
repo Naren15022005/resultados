@@ -88,7 +88,7 @@ async function createParticipant(nombre, estimado, foto) {
     const exists = currentData.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
     if (exists) return { exists: true };
 
-    await participantesRef.push({
+    const ref = await participantesRef.push({
         nombre:        nombre.trim(),
         estimado:      parseInt(estimado, 10),
         resultado:     null,
@@ -97,6 +97,7 @@ async function createParticipant(nombre, estimado, foto) {
     });
 
     localStorage.setItem(HOY_DATE_KEY, getHoyDate());
+    localStorage.setItem('icfes_my_key', ref.key);
     return { success: true };
 }
 
@@ -167,6 +168,8 @@ function renderParticipantesHoy() {
         return;
     }
 
+    const myKey = localStorage.getItem('icfes_my_key');
+
     container.innerHTML = currentData.map(p => `
         <div class="participant-item">
             <div class="participant-left">
@@ -186,6 +189,10 @@ function renderParticipantesHoy() {
                     </div>
                 </div>
             </div>
+            ${p.firebaseKey === myKey ? `
+            <button class="btn btn-danger btn-small" onclick="deleteParticipantBtn('${p.firebaseKey}')">
+                <i data-lucide="trash-2" width="13" height="13"></i>
+            </button>` : ''}
         </div>
     `).join('');
     renderIcons();
