@@ -1,13 +1,47 @@
 'use strict';
 
-const APP_KEY      = 'icfes_2026_data';
+// Restricciones por dispositivo (localStorage)
 const HOY_DATE_KEY = 'icfes_2026_hoy_date';
 const RES_DATE_KEY = 'icfes_2026_res_date_';
 
+let participantesRef;
+let currentData = []; // sincronizado en tiempo real desde Firebase
+
+// ── Firebase ──────────────────────────────────────────────────
+function initFirebase() {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    const db = firebase.database();
+    participantesRef = db.ref('participantes');
+
+    // Indicador de conexion
+    firebase.database().ref('.info/connected').on('value', (snap) => {
+        const el = document.getElementById('connectionDot');
+        if (!el) return;
+        const ok = snap.val() === true;
+        el.style.background    = ok ? 'var(--success)' : 'var(--danger)';
+        el.style.boxShadow     = ok ? '0 0 8px var(--success)' : '0 0 8px var(--danger)';
+        el.title               = ok ? 'Conectado en tiempo real' : 'Sin conexion';
+    });
+
+    // Listener principal — se dispara cada vez que alguien cambia datos
+    participantesRef.on('value', (snapshot) => {
+        const raw = snapshot.val() || {};
+        currentData = Object.entries(raw)
+            .map(([key, val]) => ({ ...val, firebaseKey: key }))
+            .sort((a, b) => new Date(a.fechaRegistro) - new Date(b.fechaRegistro));
+
+        renderParticipantesHoy();
+
+        const activeId = document.querySelector('.tab-content.active')?.id;
+        if (activeId === 'ranking')    renderRanking();
+        if (activeId === 'resultados') renderResultados();
+    });
+}
+
 // ── Utilities ─────────────────────────────────────────────────
 function getHoyDate() { return new Date().toISOString().split('T')[0]; }
-function getData()    { const s = localStorage.getItem(APP_KEY); return s ? JSON.parse(s) : []; }
-function saveData(d)  { localStorage.setItem(APP_KEY, JSON.stringify(d)); }
+function yaIngresoHoy() { return localStorage.getItem(HOY_DATE_KEY) === getHoyDate(); }
+function puedeIngresarResultado(nombre) { return localStorage.getItem(RES_DATE_KEY + nombre.toLowerCase()) !== getHoyDate(); }
 
 function initials(nombre) {
     return nombre.trim().split(' ').slice(0, 2).map(w => w[0].toUpperCase()).join('');
@@ -47,41 +81,43 @@ function avatarEl(foto, nombre, cssClass) {
     return `<${tag} class="${cssClass.replace('avatar', 'avatar-placeholder')}">${initials(nombre)}</${tag}>`;
 }
 
-// ── State ─────────────────────────────────────────────────────
-function yaIngresoHoy()               { return localStorage.getItem(HOY_DATE_KEY) === getHoyDate(); }
-function puedeIngresarResultado(n)    { return localStorage.getItem(RES_DATE_KEY + n.toLowerCase()) !== getHoyDate(); }
-
-// ── Data operations ───────────────────────────────────────────
-function createParticipant(nombre, estimado, foto) {
-    const data = getData();
-    if (data.find(p => p.nombre.toLowerCase() === nombre.toLowerCase())) return { exists: true };
+// ── Data operations (Firebase) ────────────────────────────────
+async function createParticipant(nombre, estimado, foto) {
     if (yaIngresoHoy()) return { yaIngreso: true };
 
-    data.push({ id: Date.now(), nombre: nombre.trim(), estimado: parseInt(estimado, 10), resultado: null, foto: foto || null, fechaRegistro: new Date().toISOString() });
-    saveData(data);
+    const exists = currentData.some(p => p.nombre.toLowerCase() === nombre.toLowerCase());
+    if (exists) return { exists: true };
+
+    await participantesRef.push({
+        nombre:        nombre.trim(),
+        estimado:      parseInt(estimado, 10),
+        resultado:     null,
+        foto:          foto || null,
+        fechaRegistro: new Date().toISOString()
+    });
+
     localStorage.setItem(HOY_DATE_KEY, getHoyDate());
     return { success: true };
 }
 
-function updateResultado(nombre, resultado) {
-    const data = getData();
-    const p = data.find(p => p.nombre.toLowerCase() === nombre.toLowerCase());
-    if (!p) return { error: true };
+async function updateResultado(firebaseKey, nombre, resultado) {
     if (!puedeIngresarResultado(nombre)) return { yaIngreso: true };
-    p.resultado = parseInt(resultado, 10);
-    saveData(data);
+
+    await participantesRef.child(firebaseKey).update({ resultado: parseInt(resultado, 10) });
     localStorage.setItem(RES_DATE_KEY + nombre.toLowerCase(), getHoyDate());
     return { success: true };
 }
 
-function deleteParticipant(id) { saveData(getData().filter(p => p.id !== id)); }
+function deleteParticipant(firebaseKey) {
+    participantesRef.child(firebaseKey).remove();
+}
 
 // ── Render: Tab Hoy ───────────────────────────────────────────
 function renderParticipantesHoy() {
-    const data = getData();
     const container = document.getElementById('participantesHoy');
+    if (!container) return;
 
-    if (data.length === 0) {
+    if (currentData.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon"><i data-lucide="target" width="48" height="48"></i></div>
@@ -91,7 +127,7 @@ function renderParticipantesHoy() {
         return;
     }
 
-    container.innerHTML = data.map(p => `
+    container.innerHTML = currentData.map(p => `
         <div class="participant-item">
             <div class="participant-left">
                 ${avatarEl(p.foto, p.nombre, 'participant-avatar')}
@@ -110,7 +146,7 @@ function renderParticipantesHoy() {
                     </div>
                 </div>
             </div>
-            <button class="btn btn-danger btn-small" onclick="deleteParticipantBtn(${p.id})">
+            <button class="btn btn-danger btn-small" onclick="deleteParticipantBtn('${p.firebaseKey}')">
                 <i data-lucide="trash-2" width="13" height="13"></i> Eliminar
             </button>
         </div>
@@ -120,14 +156,13 @@ function renderParticipantesHoy() {
 
 // ── Render: Tab Resultados ────────────────────────────────────
 function renderResultados() {
-    const buscar    = document.getElementById('buscarNombre').value.toLowerCase().trim();
-    const data      = getData();
-    const container = document.getElementById('resultadosContainer');
+    const buscar      = document.getElementById('buscarNombre').value.toLowerCase().trim();
+    const container   = document.getElementById('resultadosContainer');
     const comparacion = document.getElementById('comparacionContainer');
 
     if (!buscar) { container.innerHTML = ''; comparacion.innerHTML = ''; return; }
 
-    const filtered = data.filter(p => p.nombre.toLowerCase().includes(buscar));
+    const filtered = currentData.filter(p => p.nombre.toLowerCase().includes(buscar));
 
     if (filtered.length === 0) {
         container.innerHTML = `<div class="error-message"><i data-lucide="x-circle" width="16" height="16"></i> No encontramos ningun participante con ese nombre.</div>`;
@@ -138,6 +173,8 @@ function renderResultados() {
 
     container.innerHTML = filtered.map(p => {
         const puedeHoy = puedeIngresarResultado(p.nombre);
+        const safeKey  = p.firebaseKey.replace(/-/g, '_');
+        const inputId  = `res_${safeKey}`;
         return `
             <div class="result-block">
                 <div class="flex-avatar-row">
@@ -154,10 +191,10 @@ function renderResultados() {
                     </div>
                 ` : puedeHoy ? `
                     <div class="form-group" style="margin-top:14px;">
-                        <label for="res${p.id}">Tu resultado final (0–500)</label>
-                        <input type="number" id="res${p.id}" min="0" max="500" placeholder="385">
+                        <label for="${inputId}">Tu resultado final (0–500)</label>
+                        <input type="number" id="${inputId}" min="0" max="500" placeholder="385">
                     </div>
-                    <button class="btn btn-success" onclick="setResultadoBtn(${p.id},'res${p.id}')">
+                    <button class="btn btn-success" onclick="setResultadoBtn('${p.firebaseKey}', '${inputId}')">
                         <i data-lucide="check-circle" width="16" height="16"></i> Guardar Resultado
                     </button>
                 ` : `
@@ -166,41 +203,41 @@ function renderResultados() {
                         Ya ingresaste tu resultado hoy. Vuelve manana para actualizar.
                     </div>
                 `}
-            </div>
-        `;
+            </div>`;
     }).join('');
 
-    const conResultados = data.filter(p => p.resultado !== null).sort((a, b) => b.resultado - a.resultado);
-    if (conResultados.length === 0) { comparacion.innerHTML = ''; renderIcons(); return; }
-
-    const rows = conResultados.map(p => {
-        const diff = p.resultado - p.estimado;
-        const cls  = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
-        const sym  = diff > 0 ? '+' : '';
-        return `
-            <tr>
-                <td><div class="table-avatar-cell">${avatarEl(p.foto, p.nombre, 'ranking-avatar')}<strong>${p.nombre}</strong></div></td>
-                <td style="text-align:center;"><strong>${p.estimado}</strong></td>
-                <td style="text-align:center;"><strong>${p.resultado}</strong></td>
-                <td style="text-align:center;"><span class="difference ${cls}">${sym}${diff}</span></td>
-            </tr>`;
-    }).join('');
-
-    comparacion.innerHTML = `
-        <h3 class="section-h3" style="margin-top:24px;">Comparacion de todos</h3>
-        <table class="comparison-table">
-            <thead><tr><th>Nombre</th><th>Estimado</th><th>Resultado</th><th>Diferencia</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>`;
+    // Tabla comparacion
+    const conResultados = currentData.filter(p => p.resultado !== null).sort((a, b) => b.resultado - a.resultado);
+    if (conResultados.length > 0) {
+        const rows = conResultados.map(p => {
+            const diff = p.resultado - p.estimado;
+            const cls  = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
+            const sym  = diff > 0 ? '+' : '';
+            return `
+                <tr>
+                    <td><div class="table-avatar-cell">${avatarEl(p.foto, p.nombre, 'ranking-avatar')}<strong>${p.nombre}</strong></div></td>
+                    <td style="text-align:center;"><strong>${p.estimado}</strong></td>
+                    <td style="text-align:center;"><strong>${p.resultado}</strong></td>
+                    <td style="text-align:center;"><span class="difference ${cls}">${sym}${diff}</span></td>
+                </tr>`;
+        }).join('');
+        comparacion.innerHTML = `
+            <h3 class="section-h3" style="margin-top:24px;">Comparacion de todos</h3>
+            <table class="comparison-table">
+                <thead><tr><th>Nombre</th><th>Estimado</th><th>Resultado</th><th>Diferencia</th></tr></thead>
+                <tbody>${rows}</tbody>
+            </table>`;
+    } else {
+        comparacion.innerHTML = '';
+    }
     renderIcons();
 }
 
 // ── Render: Tab Ranking ───────────────────────────────────────
 function renderRanking() {
-    const data = getData();
-    const conResultados = data.filter(p => p.resultado !== null).sort((a, b) => b.resultado - a.resultado);
-    const container = document.getElementById('rankingContainer');
-    const statsGrid = document.getElementById('statsGrid');
+    const conResultados = currentData.filter(p => p.resultado !== null).sort((a, b) => b.resultado - a.resultado);
+    const container  = document.getElementById('rankingContainer');
+    const statsGrid  = document.getElementById('statsGrid');
 
     if (conResultados.length === 0) {
         container.innerHTML = `
@@ -213,38 +250,25 @@ function renderRanking() {
         return;
     }
 
-    const promEst = Math.round(data.reduce((s, p) => s + p.estimado, 0) / data.length);
+    const promEst = Math.round(currentData.reduce((s, p) => s + p.estimado, 0) / currentData.length);
     const promRes = Math.round(conResultados.reduce((s, p) => s + p.resultado, 0) / conResultados.length);
     const maxRes  = Math.max(...conResultados.map(p => p.resultado));
     const minRes  = Math.min(...conResultados.map(p => p.resultado));
 
     statsGrid.innerHTML = `
-        <div class="stat-card">
-            <div class="stat-label">Prom. Estimado</div>
-            <div class="stat-value">${promEst}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Prom. Real</div>
-            <div class="stat-value">${promRes}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Maximo</div>
-            <div class="stat-value">${maxRes}</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Minimo</div>
-            <div class="stat-value">${minRes}</div>
-        </div>`;
+        <div class="stat-card"><div class="stat-label">Prom. Estimado</div><div class="stat-value">${promEst}</div></div>
+        <div class="stat-card"><div class="stat-label">Prom. Real</div><div class="stat-value">${promRes}</div></div>
+        <div class="stat-card"><div class="stat-label">Maximo</div><div class="stat-value">${maxRes}</div></div>
+        <div class="stat-card"><div class="stat-label">Minimo</div><div class="stat-value">${minRes}</div></div>`;
 
     const rankClass = ['rank-1', 'rank-2', 'rank-3'];
     const rows = conResultados.map((p, i) => {
         const diff = p.resultado - p.estimado;
         const cls  = diff > 0 ? 'positive' : diff < 0 ? 'negative' : 'neutral';
         const sym  = diff > 0 ? '+' : '';
-        const badge = `<span class="rank-badge ${rankClass[i] || ''}">${i + 1}</span>`;
         return `
             <tr>
-                <td style="text-align:center;">${badge}</td>
+                <td style="text-align:center;"><span class="rank-badge ${rankClass[i] || ''}">${i + 1}</span></td>
                 <td><div class="table-avatar-cell">${avatarEl(p.foto, p.nombre, 'ranking-avatar')}<span>${p.nombre}</span></div></td>
                 <td style="text-align:center;"><strong>${p.estimado}</strong></td>
                 <td style="text-align:center;"><strong>${p.resultado}</strong></td>
@@ -261,32 +285,30 @@ function renderRanking() {
 }
 
 // ── Button handlers ───────────────────────────────────────────
-window.setResultadoBtn = function(id, inputId) {
-    const resultado = document.getElementById(inputId).value;
+window.setResultadoBtn = async function(firebaseKey, inputId) {
+    const resultado = document.getElementById(inputId)?.value;
     if (!resultado) { alert('Ingresa tu resultado'); return; }
 
-    const p   = getData().find(p => p.id === id);
-    const res = updateResultado(p.nombre, resultado);
+    const p   = currentData.find(p => p.firebaseKey === firebaseKey);
+    if (!p) return;
+
+    const res = await updateResultado(firebaseKey, p.nombre, resultado);
     const msg = document.getElementById('resultadosMessage');
 
     if (res.yaIngreso) {
         msg.innerHTML = `<div class="warning-message"><i data-lucide="clock" width="16" height="16"></i> Ya ingresaste tu resultado hoy. Vuelve manana para actualizar.</div>`;
     } else if (res.success) {
         msg.innerHTML = `<div class="success-message"><i data-lucide="check-circle" width="16" height="16"></i> Resultado registrado correctamente.</div>`;
-        renderResultados();
         setTimeout(() => msg.innerHTML = '', 5000);
     }
     renderIcons();
 };
 
-window.deleteParticipantBtn = function(id) {
-    if (confirm('¿Eliminar este registro?')) {
-        deleteParticipant(id);
-        renderParticipantesHoy();
-    }
+window.deleteParticipantBtn = function(firebaseKey) {
+    if (confirm('¿Eliminar este registro?')) deleteParticipant(firebaseKey);
 };
 
-// ── Image upload (form Hoy) ───────────────────────────────────
+// ── Image upload ──────────────────────────────────────────────
 let pendingFoto = null;
 
 function setupImageUpload() {
@@ -327,7 +349,7 @@ document.getElementById('formHoy').addEventListener('submit', async function(e) 
     const estimado = document.getElementById('estimado').value;
     const msg      = document.getElementById('hoyMessage');
 
-    const result = createParticipant(nombre, estimado, pendingFoto);
+    const result = await createParticipant(nombre, estimado, pendingFoto);
 
     if (result.exists) {
         msg.innerHTML = `<div class="error-message"><i data-lucide="x-circle" width="16" height="16"></i> Ese nombre ya esta registrado.</div>`;
@@ -339,7 +361,6 @@ document.getElementById('formHoy').addEventListener('submit', async function(e) 
         pendingFoto = null;
         document.getElementById('imagePreviewWrap').classList.remove('visible');
         document.getElementById('uploadText').style.display = '';
-        renderParticipantesHoy();
         setTimeout(() => msg.innerHTML = '', 5000);
     }
     renderIcons();
@@ -361,5 +382,5 @@ document.getElementById('buscarNombre').addEventListener('input', renderResultad
 
 // ── Boot ──────────────────────────────────────────────────────
 setupImageUpload();
-renderParticipantesHoy();
+initFirebase();
 renderIcons();

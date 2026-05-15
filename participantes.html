@@ -13,7 +13,10 @@
                 <i data-lucide="arrow-left" width="15" height="15"></i>
                 Volver
             </a>
-            <span class="page-title">Participantes</span>
+            <span class="page-title">
+            Participantes
+            <span id="connectionDot" title="Conectando..." style="width:10px;height:10px;border-radius:50%;background:var(--text-dim);display:inline-block;margin-left:6px;vertical-align:middle;transition:all 0.4s;"></span>
+        </span>
             <a href="index.html" class="btn btn-primary btn-small" style="text-decoration:none;">
                 <i data-lucide="plus" width="15" height="15"></i>
                 Agregar
@@ -111,7 +114,10 @@
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="participantes.js"></script>
 </body>
 </html>

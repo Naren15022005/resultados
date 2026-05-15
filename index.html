@@ -12,6 +12,7 @@
             <h1>
                 <i data-lucide="book-open" width="48" height="48"></i>
                 ICFES 2026
+                <span id="connectionDot" title="Conectando..." style="width:11px;height:11px;border-radius:50%;background:var(--text-dim);display:inline-block;flex-shrink:0;transition:all 0.4s;"></span>
             </h1>
             <p>Estimado vs Resultado</p>
             <a href="participantes.html" class="header-nav-btn">
@@ -109,7 +110,10 @@
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="firebase-config.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

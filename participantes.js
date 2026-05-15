@@ -1,16 +1,39 @@
 'use strict';
 
-const APP_KEY = 'icfes_2026_data';
-
 let currentView     = 'grid';
-let editingId       = null;
-let deletingId      = null;
+let editingKey      = null;
+let deletingKey     = null;
 let editPendingFoto = undefined;
+let currentData     = [];
 
-// ── Data ──────────────────────────────────────────────────────
-function getData()      { const s = localStorage.getItem(APP_KEY); return s ? JSON.parse(s) : []; }
-function saveData(data) { localStorage.setItem(APP_KEY, JSON.stringify(data)); }
+let participantesRef;
 
+// ── Firebase ──────────────────────────────────────────────────
+function initFirebase() {
+    try { firebase.initializeApp(FIREBASE_CONFIG); } catch (e) { /* ya inicializado */ }
+
+    const db = firebase.database();
+    participantesRef = db.ref('participantes');
+
+    firebase.database().ref('.info/connected').on('value', (snap) => {
+        const el = document.getElementById('connectionDot');
+        if (!el) return;
+        const ok = snap.val() === true;
+        el.style.background = ok ? 'var(--success)' : 'var(--danger)';
+        el.style.boxShadow  = ok ? '0 0 8px var(--success)' : '0 0 8px var(--danger)';
+        el.title            = ok ? 'Conectado en tiempo real' : 'Sin conexion';
+    });
+
+    participantesRef.on('value', (snapshot) => {
+        const raw = snapshot.val() || {};
+        currentData = Object.entries(raw)
+            .map(([key, val]) => ({ ...val, firebaseKey: key }))
+            .sort((a, b) => new Date(a.fechaRegistro) - new Date(b.fechaRegistro));
+        render();
+    });
+}
+
+// ── Utilities ─────────────────────────────────────────────────
 function initials(nombre) {
     return nombre.trim().split(' ').slice(0, 2).map(w => w[0].toUpperCase()).join('');
 }
@@ -47,7 +70,6 @@ function formatDate(iso) {
     return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
-// ── Avatar helpers ────────────────────────────────────────────
 function cardAvatar(p) {
     if (p.foto) return `<img src="${p.foto}" alt="${p.nombre}" class="p-card-avatar">`;
     return `<div class="p-card-avatar-placeholder">${initials(p.nombre)}</div>`;
@@ -59,7 +81,7 @@ function rowAvatar(p) {
 }
 
 function diffBadge(estimado, resultado) {
-    if (resultado === null) return '—';
+    if (resultado === null) return '<span style="color:var(--text-dim);">—</span>';
     const d   = resultado - estimado;
     const cls = d > 0 ? 'positive' : d < 0 ? 'negative' : 'neutral';
     const sym = d > 0 ? '+' : '';
@@ -67,20 +89,20 @@ function diffBadge(estimado, resultado) {
 }
 
 // ── Summary ───────────────────────────────────────────────────
-function renderSummary(data) {
-    const total        = data.length;
-    const conResultado = data.filter(p => p.resultado !== null).length;
+function renderSummary() {
+    const total        = currentData.length;
+    const conResultado = currentData.filter(p => p.resultado !== null).length;
     const sinResultado = total - conResultado;
-    const promEst      = total ? Math.round(data.reduce((s, p) => s + p.estimado, 0) / total) : 0;
+    const promEst      = total ? Math.round(currentData.reduce((s, p) => s + p.estimado, 0) / total) : 0;
     const promRes      = conResultado
-        ? Math.round(data.filter(p => p.resultado !== null).reduce((s, p) => s + p.resultado, 0) / conResultado)
+        ? Math.round(currentData.filter(p => p.resultado !== null).reduce((s, p) => s + p.resultado, 0) / conResultado)
         : null;
 
     document.getElementById('summaryBar').innerHTML = `
         <div class="summary-pill"><i data-lucide="users" width="13" height="13"></i> ${total} participante${total !== 1 ? 's' : ''}</div>
         <div class="summary-pill"><i data-lucide="check-circle" width="13" height="13"></i> ${conResultado} con resultado</div>
         <div class="summary-pill"><i data-lucide="clock" width="13" height="13"></i> ${sinResultado} sin resultado</div>
-        <div class="summary-pill"><i data-lucide="bar-chart-2" width="13" height="13"></i> Prom. estimado: ${promEst}</div>
+        <div class="summary-pill"><i data-lucide="bar-chart-2" width="13" height="13"></i> Prom. est.: ${promEst}</div>
         ${promRes !== null ? `<div class="summary-pill"><i data-lucide="target" width="13" height="13"></i> Prom. real: ${promRes}</div>` : ''}
     `;
     renderIcons();
@@ -89,8 +111,8 @@ function renderSummary(data) {
 // ── Main render ───────────────────────────────────────────────
 function render() {
     const query = document.getElementById('searchInput').value.toLowerCase().trim();
-    const data  = getData().filter(p => !query || p.nombre.toLowerCase().includes(query));
-    renderSummary(getData());
+    const data  = currentData.filter(p => !query || p.nombre.toLowerCase().includes(query));
+    renderSummary();
     const container = document.getElementById('participantsContainer');
     currentView === 'grid' ? renderGrid(container, data) : renderList(container, data);
 }
@@ -108,12 +130,12 @@ function renderGrid(container, data) {
         return;
     }
 
+    const sorted    = [...currentData].filter(p => p.resultado !== null).sort((a, b) => b.resultado - a.resultado);
     const rankClass = ['rank-1', 'rank-2', 'rank-3'];
-    const sorted    = [...data].sort((a, b) => (b.resultado ?? -1) - (a.resultado ?? -1));
 
     const cards = data.map(p => {
-        const rankIdx = sorted.findIndex(s => s.id === p.id);
-        const badge   = p.resultado !== null && rankIdx < 3
+        const rankIdx = sorted.findIndex(s => s.firebaseKey === p.firebaseKey);
+        const badge   = rankIdx >= 0 && rankIdx < 3
             ? `<span class="rank-badge ${rankClass[rankIdx]}" style="position:absolute;top:12px;right:12px;">${rankIdx + 1}</span>`
             : '';
         return `
@@ -140,10 +162,10 @@ function renderGrid(container, data) {
                     </div>
                 ` : `<div class="p-no-result">Sin resultado aun</div>`}
                 <div class="p-card-actions">
-                    <button class="btn btn-primary btn-small" onclick="openEdit(${p.id})">
+                    <button class="btn btn-primary btn-small" onclick="openEdit('${p.firebaseKey}')">
                         <i data-lucide="pencil" width="13" height="13"></i> Editar
                     </button>
-                    <button class="btn btn-danger btn-small" onclick="openDelete(${p.id})">
+                    <button class="btn btn-danger btn-small" onclick="openDelete('${p.firebaseKey}')">
                         <i data-lucide="trash-2" width="13" height="13"></i>
                     </button>
                 </div>
@@ -188,10 +210,10 @@ function renderList(container, data) {
                 </div>
             </div>
             <div class="p-row-actions">
-                <button class="btn btn-primary btn-small" onclick="openEdit(${p.id})">
+                <button class="btn btn-primary btn-small" onclick="openEdit('${p.firebaseKey}')">
                     <i data-lucide="pencil" width="13" height="13"></i> Editar
                 </button>
-                <button class="btn btn-danger btn-small" onclick="openDelete(${p.id})">
+                <button class="btn btn-danger btn-small" onclick="openDelete('${p.firebaseKey}')">
                     <i data-lucide="trash-2" width="13" height="13"></i>
                 </button>
             </div>
@@ -202,11 +224,11 @@ function renderList(container, data) {
 }
 
 // ── Edit modal ────────────────────────────────────────────────
-window.openEdit = function(id) {
-    const p = getData().find(p => p.id === id);
+window.openEdit = function(firebaseKey) {
+    const p = currentData.find(p => p.firebaseKey === firebaseKey);
     if (!p) return;
 
-    editingId       = id;
+    editingKey      = firebaseKey;
     editPendingFoto = undefined;
 
     document.getElementById('editModalTitle').textContent = `Editar — ${p.nombre}`;
@@ -233,28 +255,22 @@ window.openEdit = function(id) {
 
 window.closeModal = function() {
     document.getElementById('editModal').classList.remove('open');
-    editingId = null; editPendingFoto = undefined;
+    editingKey = null; editPendingFoto = undefined;
 };
 
-window.saveEdit = function() {
-    const data = getData();
-    const p    = data.find(p => p.id === editingId);
-    if (!p) return;
-
-    const estimado  = parseInt(document.getElementById('editEstimado').value, 10);
-    const resVal    = document.getElementById('editResultado').value;
+window.saveEdit = async function() {
+    const estimado = parseInt(document.getElementById('editEstimado').value, 10);
+    const resVal   = document.getElementById('editResultado').value;
     const resultado = resVal !== '' ? parseInt(resVal, 10) : null;
 
     if (isNaN(estimado) || estimado < 0 || estimado > 500) { alert('Estimado invalido (0–500)'); return; }
     if (resultado !== null && (isNaN(resultado) || resultado < 0 || resultado > 500)) { alert('Resultado invalido (0–500)'); return; }
 
-    p.estimado  = estimado;
-    p.resultado = resultado;
-    if (editPendingFoto !== undefined) p.foto = editPendingFoto;
+    const updates = { estimado, resultado };
+    if (editPendingFoto !== undefined) updates.foto = editPendingFoto;
 
-    saveData(data);
+    await participantesRef.child(editingKey).update(updates);
     closeModal();
-    render();
 };
 
 document.getElementById('editFotoInput').addEventListener('change', async (e) => {
@@ -274,28 +290,27 @@ document.getElementById('editRemoveImg').addEventListener('click', () => {
 });
 
 // ── Delete modal ──────────────────────────────────────────────
-window.openDelete = function(id) {
-    deletingId = id;
+window.openDelete = function(firebaseKey) {
+    deletingKey = firebaseKey;
     document.getElementById('deleteModal').classList.add('open');
 };
 
 window.closeDeleteModal = function() {
     document.getElementById('deleteModal').classList.remove('open');
-    deletingId = null;
+    deletingKey = null;
 };
 
-window.confirmDelete = function() {
-    if (!deletingId) return;
-    saveData(getData().filter(p => p.id !== deletingId));
+window.confirmDelete = async function() {
+    if (!deletingKey) return;
+    await participantesRef.child(deletingKey).remove();
     closeDeleteModal();
-    render();
 };
 
 document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
             overlay.classList.remove('open');
-            editingId = null; deletingId = null; editPendingFoto = undefined;
+            editingKey = null; deletingKey = null; editPendingFoto = undefined;
         }
     });
 });
@@ -318,5 +333,5 @@ document.getElementById('btnList').addEventListener('click', () => {
 document.getElementById('searchInput').addEventListener('input', render);
 
 // ── Boot ──────────────────────────────────────────────────────
-render();
+initFirebase();
 renderIcons();
