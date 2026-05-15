@@ -227,10 +227,14 @@ function renderResultados() {
             <div class="result-block">
                 <div class="flex-avatar-row">
                     ${avatarEl(p.foto, p.nombre, 'participant-avatar')}
-                    <h3>${p.nombre}</h3>
+                    <div>
+                        <h3 style="margin:0;">${p.nombre}</h3>
+                        ${p.carrera ? `<div class="participant-career" style="margin-top:4px;"><i data-lucide="graduation-cap" width="11" height="11"></i>${p.carrera}</div>` : ''}
+                    </div>
                 </div>
                 <div class="resultado-display">
-                    <strong>Tu estimacion: ${p.estimado}</strong>
+                    <strong>Estimado: ${p.estimado}</strong>
+                    ${p.carrera ? `&nbsp;·&nbsp;<span style="color:var(--accent);font-size:0.9em;">${p.carrera}</span>` : ''}
                 </div>
                 ${p.resultado !== null ? `
                     <div class="info-message">
@@ -263,7 +267,14 @@ function renderResultados() {
             const sym  = diff > 0 ? '+' : '';
             return `
                 <tr>
-                    <td><div class="table-avatar-cell">${avatarEl(p.foto, p.nombre, 'ranking-avatar')}<strong>${p.nombre}</strong></div></td>
+                    <td>
+                        <div class="table-avatar-cell">${avatarEl(p.foto, p.nombre, 'ranking-avatar')}
+                            <div>
+                                <strong>${p.nombre}</strong>
+                                ${p.carrera ? `<div style="font-size:0.75em;color:var(--accent);margin-top:1px;">${p.carrera}</div>` : ''}
+                            </div>
+                        </div>
+                    </td>
                     <td style="text-align:center;"><strong>${p.estimado}</strong></td>
                     <td style="text-align:center;"><strong>${p.resultado}</strong></td>
                     <td style="text-align:center;"><span class="difference ${cls}">${sym}${diff}</span></td>
