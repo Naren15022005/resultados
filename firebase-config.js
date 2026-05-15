@@ -1,5 +1,5 @@
 // Cambia esto por tu contraseña de admin
-const ADMIN_PASSWORD = "icfes2026";
+const ADMIN_PASSWORD = "icfes2026s";
 
 const FIREBASE_CONFIG = {
     apiKey:            "AIzaSyDAySoiWtWhQGhv_NyGYcvcUPEiNvlwlKQ",
