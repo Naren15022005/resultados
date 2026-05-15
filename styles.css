@@ -770,6 +770,164 @@ input[readonly] {
 
 .modal p { color: var(--text-muted); font-size: 0.95em; }
 
+/* ── Carrera label ───────────────────────────────────────────── */
+.participant-career, .p-row-career {
+    font-size: 0.78em;
+    color: var(--accent);
+    font-weight: 500;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.p-card-career {
+    font-size: 0.76em;
+    color: var(--accent);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* ── Career ranking ──────────────────────────────────────────── */
+.career-section-title {
+    color: var(--text);
+    font-weight: 700;
+    font-size: 1.05em;
+    margin: 32px 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+.career-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 14px;
+}
+
+.career-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.career-card:hover { border-color: var(--border-bright); box-shadow: 0 0 20px rgba(217,70,239,0.08); }
+
+.career-card-title {
+    background: linear-gradient(135deg, rgba(217,70,239,0.12), rgba(147,51,234,0.12));
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    font-size: 0.84em;
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.career-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+}
+
+.career-row:last-child { border-bottom: none; }
+.career-winner-row { background: rgba(217,70,239,0.04); }
+
+.career-row-info { flex: 1; min-width: 0; }
+.career-row-name { font-weight: 600; color: var(--text); font-size: 0.88em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.career-row-score { font-size: 0.78em; color: var(--success); font-weight: 700; }
+.career-crown { color: var(--gold); flex-shrink: 0; }
+
+/* ── Album ───────────────────────────────────────────────────── */
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+.album-card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: transform 0.22s, box-shadow 0.22s, border-color 0.22s;
+    background: var(--surface-2);
+}
+
+.album-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 28px var(--accent-glow);
+    border-color: var(--border-bright);
+}
+
+.album-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.album-card-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 28px 10px 10px;
+    background: linear-gradient(transparent, rgba(6,6,14,0.92));
+}
+
+.album-card-name   { font-weight: 700; color: white; font-size: 0.85em; }
+.album-card-career { color: var(--accent); font-size: 0.72em; font-weight: 500; margin-top: 1px; }
+.album-card-score  { color: var(--success); font-size: 0.72em; font-weight: 700; margin-top: 1px; }
+
+/* Lightbox */
+.lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    cursor: zoom-out;
+}
+
+.lightbox.open { display: flex; }
+
+.lightbox img {
+    max-width: 90vw;
+    max-height: 88vh;
+    border-radius: 12px;
+    box-shadow: 0 0 60px rgba(217,70,239,0.3);
+    object-fit: contain;
+}
+
+.lightbox-info {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    color: white;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 16px; right: 20px;
+    background: none; border: none;
+    color: var(--text-muted); cursor: pointer;
+    transition: color 0.2s;
+}
+
+.lightbox-close:hover { color: white; }
+
 /* ── Propia card ────────────────────────────────────────────── */
 .mine-tag {
     display: inline-flex;
